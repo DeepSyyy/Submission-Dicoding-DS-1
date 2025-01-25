@@ -18,10 +18,39 @@ base_dir = os.path.dirname(__file__)
 # Path ke dataset
 day_path = os.path.join(base_dir, "../data/day.csv")
 hour_path = os.path.join(base_dir, "../data/hour.csv")
+all_path = os.path.join(base_dir, "merged_data.csv")
 
 # Membaca file CSV
 day_df = pd.read_csv(day_path)
 hour_df = pd.read_csv(hour_path)
+all_df = pd.read_csv(all_path)
+
+all_df["date"] = pd.to_datetime(all_df["date"])
+
+with st.sidebar:
+    st.title("Just Rent")
+    st.write(
+        """
+        Aplikasi ini dibuat untuk mengetahui pola penyewaan sepeda berdasarkan dataset day.csv dan hour.csv.
+        """
+    )
+
+    image_path = os.path.join(base_dir, "logo.png")
+
+    st.image(image_path)
+
+    min_date = all_df["date"].min()
+    max_date = all_df["date"].max()
+
+    start_date, end_date = st.date_input(
+        label="Rentang Waktu",
+        min_value=min_date,
+        max_value=max_date,
+        value=[min_date, max_date],
+    )
+
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
 
 
 # Ringkasan Data Day.csv tab1
@@ -29,6 +58,50 @@ with tab1:
     st.header("Ringkasan Data day.csv")
     st.write("Jumlah baris dan kolom:", day_df.shape)
     st.dataframe(day_df.head())  # Menampilkan 5 data teratas
+
+    st.header("Total Rentals per Hari")
+    if start_date > end_date:
+        st.error("Tanggal awal harus lebih kecil dari tanggal akhir.")
+    else:
+        filtered_df = all_df[
+            (all_df["date"] >= start_date) & (all_df["date"] <= end_date)
+        ]
+        # Grouping data berdasarkan workingday, holiday, dan weekday
+        day_category = filtered_df.groupby(
+            ["workingday_x", "holiday_x", "weekday_x"], as_index=False
+        ).agg(
+            {"total_rentals_x": "sum"}
+        )  # Agregasi: jumlah total rental
+
+        # Ganti nama kolom untuk kejelasan
+        day_category.columns = ["Working Day", "Holiday", "Weekday", "Total Rentals"]
+
+        # Visualisasi dengan barplot
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(
+            data=day_category,
+            x="Weekday",
+            y="Total Rentals",
+            hue="Working Day",
+            palette="pastel",
+            hue_order=[1, 0],  # Urutan untuk memastikan legenda teratur
+            ax=ax,
+        )
+        ax.set_title("Total Rentals berdasarkan Kategori Hari", fontsize=14)
+        ax.set_xlabel("Weekday", fontsize=12)
+        ax.set_ylabel("Total Rentals", fontsize=12)
+
+        # Ubah label legend
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(
+            handles,
+            ["Working Day", "Non-Working Day"],  # Ganti label legend
+            title="Day Type",
+            fontsize=10,
+            title_fontsize=12,
+        )
+
+        st.pyplot(fig)
 
     # Rata-rata Penyewaan Sepeda per Bulan
     st.header("Rata-rata Penyewaan Sepeda per Bulan")
@@ -174,6 +247,40 @@ with tab2:
     st.header("Ringkasan Data hour.csv")
     st.write("Jumlah baris dan kolom:", hour_df.shape)
     st.dataframe(hour_df.head())  # Menampilkan 5 data teratas
+
+    st.header("Total Rentals per Jam")
+    if start_date > end_date:
+        st.error("Tanggal awal harus lebih kecil dari tanggal akhir.")
+    else:
+        # Filter data berdasarkan rentang tanggal
+        filtered_hour_df = all_df[
+            (all_df["date"] >= start_date) & (all_df["date"] <= end_date)
+        ]
+
+        # Grouping data berdasarkan jam dan melakukan agregasi total rental
+        hour_category = filtered_hour_df.groupby(["hour"], as_index=False).agg(
+            {"total_rentals_y": "sum"}
+        )  # Agregasi: jumlah total rental
+
+        # Visualisasi dengan barplot
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.barplot(
+            data=hour_category,
+            x="hour",
+            y="total_rentals_y",
+            palette="pastel",
+            ax=ax,
+        )
+        ax.set_title(
+            f"Total Rentals per Jam ({start_date.date()} - {end_date.date()})",
+            fontsize=14,
+        )
+        ax.set_xlabel("Jam", fontsize=12)
+        ax.set_ylabel("Total Rentals", fontsize=12)
+        ax.set_xticks(range(0, 24))  # Tampilkan semua jam pada sumbu x
+        ax.set_xticklabels([f"{i}:00" for i in range(24)], rotation=45)
+
+        st.pyplot(fig)
 
     # Rata-rata Penyewaan Sepeda per Jam
     st.header("Rata-rata Penyewaan Sepeda per Jam")
