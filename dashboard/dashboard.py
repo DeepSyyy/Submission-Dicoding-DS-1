@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
+import os
 
 # Header
 st.title("Dashboard Analisis Data Penyewaan Sepeda")
@@ -11,9 +12,17 @@ st.write(
 
 tab1, tab2 = st.tabs(["Day.csv", "Hour.csv"])
 
-# Load data
-day_df = pd.read_csv("../data/day.csv")
-hour_df = pd.read_csv("../data/hour.csv")
+# Dapatkan path absolut dari script
+base_dir = os.path.dirname(__file__)
+
+# Path ke dataset
+day_path = os.path.join(base_dir, "../data/day.csv")
+hour_path = os.path.join(base_dir, "../data/hour.csv")
+
+# Membaca file CSV
+day_df = pd.read_csv(day_path)
+hour_df = pd.read_csv(hour_path)
+
 
 # Ringkasan Data Day.csv tab1
 with tab1:
